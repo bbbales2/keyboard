@@ -11,31 +11,95 @@ import nltk
 import re
 import os
 import sys
+import evdev
+# import InputDevice, ecodes
 
-base = '/home/bbales2/keyboard'
-#%%
-from evdev import InputDevice, ecodes
-print "Attaching to input devices"
+# This should be the path to the current directory
+try:
+    base = os.path.dirname(os.path.realpath(__file__))
+except:
+    base = '/home/bbales2/keyboard'
 
-devices = map(InputDevice, ('/dev/input/event3', '/dev/input/event11'))
-devices = {dev.fd: dev for dev in devices}
-#dev = InputDevice('/dev/input/event4')
+print "Searching for corpus"
+
+if not os.path.exists(os.path.join(base, '345.txt')):
+    while True:
+        yn = raw_input("Would you like this script to download a corpus for you? (y/n): ").lower()
+    
+        if len(yn) >= 1 and yn[0] == 'y':
+            import urllib2
+            print "Downloading {0}".format('http://www.gutenberg.org/ebooks/345.txt.utf-8')
+            url = urllib2.urlopen('http://www.gutenberg.org/ebooks/345.txt.utf-8')
+            f = open(os.path.join(base, '345.txt'), 'w')
+            f.write(url.read())
+            f.close()
+            
+            break
+        elif len(yn) >= 1 and yn[0] == 'n':
+            print "Well download your own copy of Dracula from Gutenberg"
+            print "  as a utf-8 encoded text and store it as {0}".format(os.path.join(base, '345.txt'))
+            
+            exit(0)
+        else:
+            print "- Only enter 'y' or 'n'"
+            
+print "Scanning input devices"
+
+# These are the minimum and maximum coordinates reported by the evdev controller
+#minx = 500.0
+#miny = 500.0
+#maxx = 6400.0
+#maxy = 6400.0
+
+# One of these should be a keyboard and the other should be a touchpad in absolute mode
+devices = {}
+for f in os.listdir('/dev/input'):
+    if not re.match('event[0-9]+', f):
+        continue
+    
+    devicePath = os.path.join('/dev/input', f)
+    #print devicePath
+    if os.access(devicePath, os.R_OK):
+        dev = evdev.InputDevice(devicePath)
+        devices[dev.fd] = dev
+
+        print dev.fd, ' : ', dev.name
+
+if len(devices) < 2:
+    print "You must have a touchpad and keyboard available for reading"
+    print "  Either run this script as sudo (boooo!) or use "
+    print "  https://github.com/gvalkov/python-evdev/blob/master/bin/evtest.py"
+    print "  to find what files in /dev/input/events are touchpads and keyboards"
+    print "  and add read permissions (chmod a+r) for everyone"
+
+
+def getDevice(prompt):
+    while True:
+        variable = raw_input(prompt)
+
+        if variable.strip().isdigit():
+            return int(variable)
+
+keyboard = getDevice("Enter the device code of a keyboard: ")
+touchpad = getDevice("Enter the device code of a touchpad in absolute mode: ")
+
+devices = [ devices[keyboard], devices[touchpad] ]
+devices = { dev.fd: dev for dev in devices }
 
 #%%
 print "Detecting touchpad limits"
-ecodes.EV_ABS
 
 # Find and get input ranges for trackpad
 
 for dev in devices.values():
     caps = dev.capabilities(verbose = True)
 
-    if ('EV_ABS', ecodes.EV_ABS) not in caps:
+    if ('EV_ABS', evdev.ecodes.EV_ABS) not in caps:
         continue
 
     codes = {}
     infos = {}
-    for (name, code), absinfo in caps[('EV_ABS', ecodes.EV_ABS)]:
+    for (name, code), absinfo in caps[('EV_ABS', evdev.ecodes.EV_ABS)]:
         codes[name] = code
         infos[name] = absinfo
 
@@ -54,8 +118,10 @@ for dev in devices.values():
 print "Building dictionary"
 sys.stdout.flush()
 #Import our dictionary
-f = open(os.path.join(base, 'pg345.txt'))
-tokens = nltk.word_tokenize(f.read())
+f = open(os.path.join(base, '345.txt'))
+data = unicode(f.read(), 'utf-8')
+#print data
+tokens = nltk.word_tokenize(data)
 f.close()
 
 words = []
@@ -154,130 +220,6 @@ for (letter0, ux0, uy0), (letter1, ux1, uy1) in itertools.product(letter_means, 
     dists2[(letter0, letter1)] = scipy.stats.multivariate_normal([ux1 - ux0, uy1 - uy0], [[0.2**2, 0.0], [0.0, 0.2**2]])
 
 #%%
-minx = 500.0
-miny = 500.0
-maxx = 6400.0
-maxy = 6400.0
-#%%
-def toPrint(string):
-    sys.stdout.write("\r" + string)
-    sys.stdout.flush()
-#%%
-peaks = []
-last = None
-startl = None
-starth = None
-    
-ts = []
-rs = []
-xs = []
-ys = []
-ps = []
-
-presses = []
-
-lastWord = 0
-words = []
-printWords = []
-
-lastP = 0
-lastX = 0
-lastY = 0
-
-getOut = False
-
-lastClass = 0
-
-while True:
-    if getOut:
-        break
-
-    r, w, x = select.select(devices, [], [])
-    for fd in r:
-        if getOut:
-            break
-        #print devices[fd]
-
-        for event in devices[fd].read():
-            if event.type == ecodes.EV_KEY:
-                if event.code == 1:  # Escape
-                    getOut = True
-                    break
-                elif event.code == 57 and event.value == 1:  # Space
-                    if lastWord != len(presses):
-                        words.append((lastWord, len(presses) - lastWord))
-
-                        printWords.append(classify1(presses[lastWord : len(presses)]))
-
-                        lastWord = len(presses)
-
-                        print ''
-                        print ' '.join(printWords)
-                        sys.stdout.flush()
-                elif event.code == 14 and event.value == 1:
-                    if len(presses) > lastWord:
-                        presses.pop()
-                        
-                        sys.stdout.write("\r" + " " * 80)
-                        sys.stdout.write("\r" + classify1(presses[lastWord : len(presses)]))
-                        sys.stdout.flush()
-                    #results = classify(ts, xs, ys, ps)
-
-            if event.type == ecodes.EV_ABS:
-                if event.code == codes['ABS_X']:
-                    lastX = (float(event.value) - minx) / (maxx - minx)
-                elif event.code == codes['ABS_Y']:
-                    lastY = (float(event.value) - miny) / (maxy - miny)
-                elif event.code == codes['ABS_PRESSURE']:
-                    lastP = (float(event.value) - minp) / (maxp - minp)
-
-                idx = len(rs)
-                ts.append(event.timestamp())
-                ps.append(lastP)
-                rs.append(lastP < 0.1)
-                ys.append(lastY)
-                xs.append(lastX)
-
-                newPeak = False
-
-                if last is None:
-                    last = rs[idx]
-
-                    if last is True:
-                        startl = idx
-                    else:
-                        starth = idx
-
-                if last is True:
-                    if not rs[idx]:
-                        peaks.append((startl, (idx - 1 - startl), 0))
-                        starth = idx
-                        newPeak = True
-                else:
-                    if rs[idx]:
-                        peaks.append((starth, (idx - 1 - starth), 1))
-                        startl = idx
-                        newPeak = True
-
-                last = rs[idx]
-
-                if newPeak:
-                    start, length, press = peaks[-1]
-
-                    if press:
-                        presses.append((numpy.mean(xs[start : start + length]), numpy.mean(ys[start : start + length])))
-
-                        #print lastWord, len(presses)
-                        sys.stdout.write("\r" + " " * 80)
-                        sys.stdout.write("\r" + classify1(presses[lastWord : len(presses)]))
-                        sys.stdout.flush()
-
- #%%
-for word in words:
-    start, length = word
-    print classify1(presses[start : start + length])
-#%%
-
 
 def classify1(presses):
     if len(presses) < 1:
@@ -332,3 +274,113 @@ def classify2(presses):
 
     return tws[0][0]
 #%%
+print "\nStart typing:"
+peaks = []
+last = None
+startl = None
+starth = None
+    
+ts = []
+rs = []
+xs = []
+ys = []
+ps = []
+
+presses = []
+
+lastWord = 0
+words = []
+#printWords = []
+
+lastP = 0
+lastX = 0
+lastY = 0
+
+getOut = False
+
+lastClass = 0
+
+while True:
+    if getOut:
+        break
+
+    r, w, x = select.select(devices, [], [])
+    for fd in r:
+        if getOut:
+            break
+        #print devices[fd]
+
+        for event in devices[fd].read():
+            if event.type == evdev.ecodes.EV_KEY:
+                if event.code == 1:  # Escape
+                    getOut = True
+                    break
+                elif event.code == 57 and event.value == 1:  # Space
+                    if lastWord != len(presses):
+                        words.append((lastWord, len(presses) - lastWord))
+
+                        lastWord = len(presses)
+
+                        sys.stdout.write('\n')
+                        sys.stdout.flush()
+                elif event.code == 14 and event.value == 1:
+                    if len(presses) > lastWord:
+                        presses.pop()
+
+                        sys.stdout.write("\r" + " " * 80)
+                        sys.stdout.write("\r" + classify1(presses[lastWord : len(presses)]))
+                        sys.stdout.flush()
+                    #results = classify(ts, xs, ys, ps)
+
+            if event.type == evdev.ecodes.EV_ABS:
+                if event.code == codes['ABS_X']:
+                    lastX = (float(event.value) - minx) / (maxx - minx)
+                elif event.code == codes['ABS_Y']:
+                    lastY = (float(event.value) - miny) / (maxy - miny)
+                elif event.code == codes['ABS_PRESSURE']:
+                    lastP = (float(event.value) - minp) / (maxp - minp)
+
+                idx = len(rs)
+                ts.append(event.timestamp())
+                ps.append(lastP)
+                rs.append(lastP < 0.1)
+                ys.append(lastY)
+                xs.append(lastX)
+
+                newPeak = False
+
+                if last is None:
+                    last = rs[idx]
+
+                    if last is True:
+                        startl = idx
+                    else:
+                        starth = idx
+
+                if last is True:
+                    if not rs[idx]:
+                        peaks.append((startl, (idx - 1 - startl), 0))
+                        starth = idx
+                        newPeak = True
+                else:
+                    if rs[idx]:
+                        peaks.append((starth, (idx - 1 - starth), 1))
+                        startl = idx
+                        newPeak = True
+
+                last = rs[idx]
+
+                if newPeak:
+                    start, length, press = peaks[-1]
+
+                    if press:
+                        presses.append((numpy.mean(xs[start : start + length]), numpy.mean(ys[start : start + length])))
+
+                        #print lastWord, len(presses)
+                        sys.stdout.write("\r" + " " * 80)
+                        sys.stdout.write("\r" + classify1(presses[lastWord : len(presses)]))
+                        sys.stdout.flush()
+
+#%%
+
+
