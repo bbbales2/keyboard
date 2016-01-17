@@ -105,11 +105,44 @@ In a Python terminal:
     import nltk
     nltk.download()
 
-A window should appear. Download the 
+A window should appear. Download the book corpora.
 
-![Corpora Screenshot](/path/to/img.jpg)
+![Corpora Screenshot](https://raw.githubusercontent.com/bbbales2/keyboard/master/corpora_download.png)
 
-You'll need a bunch of Python libraries. I'll walk you through the installation process, but there are probably things here that don't translate to non-Ubuntu 14.04 computers or non-Lenovo x201 computers :D.
+Other things
+--------------
 
+Other than this you'll need
 
-http://www.gutenberg.org/cache/epub/345/pg345.txt
+    scipy > 14.0
+    numpy
+    matplotlib
+
+The scipy that comes with Ubuntu 14.04 is slightly older than that. To upgrade it
+
+    pip install --user --upgrade scipy
+
+Corpus
+-------------
+
+You'll need a corpus for the script to use. 
+
+    wget https://www.gutenberg.org/ebooks/345.txt.utf-8 345.txt
+
+That should do the trick. Put the file 345.txt in the same folder as the keyboard.py script.
+
+You're ready!
+-------------
+
+Just type
+
+    python keyboard.py
+
+and you should be prompted to select your keyboard and touchpad. If you're able to select those, then after a few seconds (the script needs to parse the Dracula corpus) you're ready to type.
+
+Just start typing things on your touchpad. To end a word press space. To delete a character press delete. To quit press escape!
+
+Have fun!
+
+Theory of Operation
+==================
