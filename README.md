@@ -21,21 +21,21 @@ evdev
 
 You'll need to install the Python evdev libraries
 
-> pip install --user evdev
+    pip install --user evdev
 
 To actually configure your trackpad, you'll need to add the line
 
-> Option "Mode" "Absolute"
+    Option "Mode" "Absolute"
 
 to your xorg.conf file. Ubuntu 14.04 just concatenates everything in /etc/X11/xorg.conf.d together as an xorg.conf.d file (https://wiki.ubuntu.com/X/Config). For me I edited the bit of /usr/share/X11/xorg.conf.d/10-evdev.conf labeled "touchpad" to look like:
 
->Section "InputClass"
->        Identifier "evdev touchpad catchall"
->        MatchIsTouchpad "on"
->        MatchDevicePath "/dev/input/event*"
->        Driver "evdev"
->        Option "Mode" "Absolute"
->EndSection
+    Section "InputClass"
+            Identifier "evdev touchpad catchall"
+            MatchIsTouchpad "on"
+            MatchDevicePath "/dev/input/event*"
+            Driver "evdev"
+            Option "Mode" "Absolute"
+    EndSection
 
 You'll need a bunch of Python libraries. I'll walk you through the installation process, but there are probably things here that don't translate to non-Ubuntu 14.04 computers or non-Lenovo x201 computers :D.
 
