@@ -16,6 +16,12 @@ Using
 
 You'll need a laptop running a Linux distribution with a touchpad that supports absolute input mode. I install all my pip packages with --user so I don't screw up system stuff. You can do whatever you want.
 
+First get a copy of this repository on your computer with
+
+    git clone https://github.com/bbbales2/keyboard.git
+
+You'll need to install a bunch of libraries to get this to work.
+
 evdev
 -------------
 
@@ -146,3 +152,4 @@ Have fun!
 
 Theory of Operation
 ==================
+
