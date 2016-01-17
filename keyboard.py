@@ -71,7 +71,7 @@ if len(devices) < 2:
     print "  https://github.com/gvalkov/python-evdev/blob/master/bin/evtest.py"
     print "  to find what files in /dev/input/events are touchpads and keyboards"
     print "  and add read permissions (chmod a+r) for everyone"
-
+    exit(-1)
 
 def getDevice(prompt):
     while True:

@@ -3,13 +3,17 @@ Introduction
 
 This is a prototype touchpad keyboard.
 
-The idea is you should be able to type messages on a touchpad even if the letters themselves aren't visible on that touchpad.
+The idea is you should be able to type messages on a touchpad even if the letters themselves aren't visible on that touchpad. I got this idea when I bought my new Steam controller and tried to type a message on it. Using the two trackpads like mice seems neeeearly good enough, but it just isn't very fast.
 
-My issue with touch typing interfaces is the regular typing ones make you press actual key buttons on a screen. I think touch typing interfaces should be more liberal about applying spellchecking/word replacement technology.
+I felt like I just wanted to type with my thumbs. I wanted to press where the keys maybe were and let Valve figure out the rest.
 
-I get that this doesn't work everywhere (for instance, typing urls where things can be mispelled and stuff), but a lot of my typing on touchscreens is just quick e-mails to my family or dumb messages to my friends. I don't need precision. I just need some speed and a half-assed interface and they can figure out the rest.
+To test if this vague sorta keyboarding is possible, I built this touchpad keyboard. It lets you type on a tiny laptop trackpad (tested on a Lenovo x201). For people who are familiar with the layout of a regular keyboard, I expect it would be quite intuitive.
 
-I prototyped this up on my Ubuntu laptop in hopes of eventually using the technology on a Steam controller.
+Ideally it could be ported to a Steam controller in split keyboard mode.
+
+The downside to this sorta keyboard is that you really need to lean on heavyweight autocomplete-style statistics. That means you can't be typing very technical things, or you can't be typing things that you don't have a reference on. For instance, it's probably not a good idea to try to program with an interface like this, but using such an interface to communicate with your friends should be okay.
+
+You can see the keyboard in operation here: https://youtu.be/ec3d1kan4jg
 
 Using
 =============
@@ -97,6 +101,8 @@ For my code to access the trackpad and keyboard inputs, you'll either need to ru
 
 Would do the trick if you had my computer, but adjust them for yours.
 
+If any of that is unclear, I have video of me walking through it here: https://youtu.be/_2fxj0EjiBM
+
 nltk
 -------------
 
@@ -153,3 +159,18 @@ Have fun!
 Theory of Operation
 ==================
 
+So the theory here is pretty simple. We have mapped positions on the touchpad to the a-z keys on a keyboard. When we press a certain place on the touchpad, the computer generates a list of distances from the place we touch to the positions of all the letters on the keyboard. From these distances, we compute a probability that a given press is a certain letter. We compute the probabilities from the distances with some made up Gaussians. Look at the code for details.
+
+So for a given press we have a list of 24 probabilities that it was a certain letter.
+
+Now given the user has made a number of presses on the keyboard, we have a list of probabilities that each touch is a letter and a length of word (number of presses). We simply evaluate the probabilities of every word of the given length (from a dictionary) and see which is most likely. Our dictionary in this case is Dracula. It could be anything.
+
+So if we have 3 presses, and we wanted to see how likely the word 'cat' was we do:
+
+p(press 1 was a 'c') * p(press 2 was an 'a') * p(press 3 was a 't')
+
+In the code we use logs so that looks like:
+
+-ln(p(press 1 was a 'c')) - ln(p(press 2 was an 'a')) - ln(p(press 3 was a 't'))
+
+Maximizing the probabilities is the same in theory as maximizing those sums of logs. The numbers are just nicer with the logs.
